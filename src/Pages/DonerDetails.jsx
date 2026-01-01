@@ -10,7 +10,6 @@ const DonorDetails = () => {
   const donorsPerPage = 10;
   const navigate = useNavigate();
 
-  // ✅ Fetch donor data (only successful donations)
   useEffect(() => {
     const q = query(collection(db, "Doner-details"), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -27,7 +26,6 @@ const DonorDetails = () => {
     return () => unsubscribe();
   }, []);
 
-  // ✅ Format timestamp → readable Indian date/time
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
     return timestamp.toDate().toLocaleString("en-IN", {
@@ -42,14 +40,12 @@ const DonorDetails = () => {
     });
   };
 
-  // ✅ Format amount with commas
   const formatAmount = (amount) => {
     if (!amount) return "0";
     const num = Number(amount);
     return num.toLocaleString("en-IN");
   };
 
-  // ✅ Pagination logic
   const indexOfLast = currentPage * donorsPerPage;
   const indexOfFirst = indexOfLast - donorsPerPage;
   const currentDonors = donors.slice(indexOfFirst, indexOfLast);
@@ -83,16 +79,13 @@ const DonorDetails = () => {
                   <td>{donor.name || "—"}</td>
                   <td>₹ {formatAmount(donor.amount)}</td>
                   <td>
-                    <span className={`status ${donor.status}`}>
+                    <span className={`status ${donor.status.toLowerCase()}`}>
                       {donor.status}
                     </span>
                   </td>
-
-                  {/* ✅ Separate columns */}
                   <td>{donor.orderId || donor.order_id || "N/A"}</td>
                   <td>{donor.paymentId || donor.payment_id || "N/A"}</td>
                   <td>{donor.rrnNumber || donor.rrn_number || donor.rrn || "N/A"}</td>
-
                   <td>{formatDate(donor.date)}</td>
                 </tr>
               ))}
@@ -101,7 +94,6 @@ const DonorDetails = () => {
         </div>
       )}
 
-      {/* ✅ Pagination */}
       {totalPages > 1 && (
         <div className="pagination">
           <button
@@ -114,9 +106,7 @@ const DonorDetails = () => {
           {[...Array(totalPages)].map((_, index) => (
             <button
               key={index + 1}
-              className={`page-btn ${
-                currentPage === index + 1 ? "active" : ""
-              }`}
+              className={`page-btn ${currentPage === index + 1 ? "active" : ""}`}
               onClick={() => handlePageChange(index + 1)}
             >
               {index + 1}
@@ -132,7 +122,6 @@ const DonorDetails = () => {
         </div>
       )}
 
-      {/* ✅ View Failed Transactions */}
       <button className="history-btn" onClick={() => navigate("/donorfailure")}>
         🚫 View Failed Transactions
       </button>

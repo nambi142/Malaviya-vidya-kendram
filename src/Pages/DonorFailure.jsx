@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../Pages/firebase";
-import "../Css/DonorDetails.css"; // ✅ reuse same styles
+import "../Css/DonorDetails.css"; 
+import { useNavigate } from "react-router-dom";
 
 const DonorFailure = () => {
   const [failedDonors, setFailedDonors] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const donorsPerPage = 10;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const q = query(collection(db, "Doner-details"), orderBy("date", "desc"));
@@ -26,7 +28,6 @@ const DonorFailure = () => {
     return () => unsubscribe();
   }, []);
 
-  // ✅ Format date to IST
   const formatDate = (timestamp) => {
     if (!timestamp?.toDate) return "-";
     return timestamp.toDate().toLocaleString("en-IN", {
@@ -41,7 +42,6 @@ const DonorFailure = () => {
     });
   };
 
-  // ✅ Pagination logic
   const indexOfLast = currentPage * donorsPerPage;
   const indexOfFirst = indexOfLast - donorsPerPage;
   const currentDonors = failedDonors.slice(indexOfFirst, indexOfLast);
@@ -63,25 +63,25 @@ const DonorFailure = () => {
                 <th>Name</th>
                 <th>Amount (₹)</th>
                 <th>Status</th>
+                <th>Order ID</th>
                 <th>Date</th>
               </tr>
             </thead>
             <tbody>
               {currentDonors.map((donor, index) => (
                 <tr key={donor.id} className={index % 2 === 0 ? "even" : "odd"}>
-                  <td>{donor.name}</td>
-                  <td>{donor.amount}</td>
+                  <td>{donor.name || "—"}</td>
+                  <td>₹ {donor.amount || "0"}</td>
                   <td>
                     <span
                       className={`status ${
-                        donor.status?.toLowerCase() === "failure"
-                          ? "pending"
-                          : "pending"
+                        donor.status?.toLowerCase() === "failure" ? "failure" : "pending"
                       }`}
                     >
                       {donor.status}
                     </span>
                   </td>
+                  <td>{donor.orderId || donor.order_id || "N/A"}</td>
                   <td>{formatDate(donor.date)}</td>
                 </tr>
               ))}
@@ -90,7 +90,6 @@ const DonorFailure = () => {
         </div>
       )}
 
-      {/* ✅ Pagination */}
       {totalPages > 1 && (
         <div className="pagination">
           <button
@@ -103,9 +102,7 @@ const DonorFailure = () => {
           {[...Array(totalPages)].map((_, index) => (
             <button
               key={index + 1}
-              className={`page-btn ${
-                currentPage === index + 1 ? "active" : ""
-              }`}
+              className={`page-btn ${currentPage === index + 1 ? "active" : ""}`}
               onClick={() => handlePageChange(index + 1)}
             >
               {index + 1}
@@ -120,6 +117,10 @@ const DonorFailure = () => {
           </button>
         </div>
       )}
+
+      <button className="history-btn" onClick={() => navigate("/donordetails")}>
+        ✅ View Successful Transactions
+      </button>
     </div>
   );
 };

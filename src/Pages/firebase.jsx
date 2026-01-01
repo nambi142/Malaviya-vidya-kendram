@@ -1,20 +1,34 @@
-// src/config/firebase.js
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+// src/firebase/donationHandler.js
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "../config/firebase";
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
+/**
+ * Save donation to Firestore safely
+ * @param {Object} order - The order object returned from backend
+ */
+export async function saveDonation(order) {
+  try {
+    if (!order) throw new Error("No order data received");
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+    // Extract fields safely
+    const orderId = order.id || null; // null is allowed in Firestore
+    const amount = order.amount || 0;
+    const name = order.name || "Anonymous";
 
-// Initialize Firestore
-const db = getFirestore(app);
+    // Save to Firestore
+    const docRef = await addDoc(collection(db, "Doner-details"), {
+      orderId,
+      amount,
+      name,
+      createdAt: new Date(), // store timestamp
+    });
 
-export { db };
+    console.log("Donation saved with ID:", docRef.id);
+    alert("Donation processed successfully!");
+    return docRef.id;
+  } catch (error) {
+    console.error("Error processing donation:", error);
+    alert("Failed to process donation. Try again.");
+    return null;
+  }
+}
