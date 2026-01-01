@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import "../Css/Donate.css";
-import { db } from "../Pages/firebase";
+import { db } from "./firebase"; 
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { createOrder, fetchRRN } from "../service";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "react-helmet-async"; // ✅ SEO Import
 
 const Donate = () => {
   const [formData, setFormData] = useState({
@@ -134,97 +134,89 @@ const Donate = () => {
       const order = await createOrder(cleanAmount);
       console.log("✅ Order created via backend:", order);
 
-      // ⚠ Safety check: ensure order.id exists
-      if (!order?.id) {
-        alert("❌ Unable to create order. Please try again later.");
-        setIsLoadingPayment(false);
-        document.body.style.overflow = "auto";
-        return;
-      }
-
+      // ✅ Save initial order to Firestore safely
       const docRef = await addDoc(collection(db, "Doner-details"), {
         ...formData,
         amount: cleanAmount,
         date: new Date(),
         status: "initiated",
-        orderId: order.id || null,
+        orderId: order.id || null, // prevent undefined
       });
 
-      // -------------------- Open Razorpay --------------------
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: Number(cleanAmount) * 100, // Razorpay amount in paise
-        currency: order.currency || "INR",
-        name: "Malaviya Vidyalaya Kendram - School Donation",
-        description:
-          "Support education for rural children in Uvari village, Tirunelveli.",
-        order_id: order.id,
-        handler: async function (response) {
-          try {
-            const rrnData = await fetchRRN(response.razorpay_payment_id);
-            const rrnNumber = rrnData?.rrnNumber || "Not Available";
-
-            await setDoc(
-              doc(db, "Doner-details", docRef.id),
-              {
-                ...formData,
-                amount: cleanAmount,
-                date: new Date(),
-                status: "success",
-                rrnNumber,
-                paymentId: response.razorpay_payment_id,
-                orderId: order.id || null,
-              },
-              { merge: true }
-            );
-            alert("🎉 Payment Successful! RRN: " + rrnNumber);
-          } catch (err) {
-            console.error("❌ Error fetching RRN:", err);
-            await setDoc(
-              doc(db, "Doner-details", docRef.id),
-              {
-                ...formData,
-                amount: cleanAmount,
-                date: new Date(),
-                status: "success",
-                paymentId: response.razorpay_payment_id,
-                orderId: order.id || null,
-              },
-              { merge: true }
-            );
-            alert("Payment successful but failed to fetch RRN.");
-          } finally {
-            document.body.style.overflow = "auto";
-          }
-        },
-        modal: {
-          ondismiss: async function () {
-            await setDoc(
-              doc(db, "Doner-details", docRef.id),
-              {
-                ...formData,
-                amount: cleanAmount,
-                date: new Date(),
-                status: "failure",
-                orderId: order.id || null,
-              },
-              { merge: true }
-            );
-            document.body.style.overflow = "auto";
+      setTimeout(() => {
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          amount: order.amount,
+          currency: order.currency,
+          name: "Malaviya Vidyalaya Kendram - School Donation",
+          description:
+            "Support education for rural children in Uvari village, Tirunelveli.",
+          order_id: order.id,
+          handler: async function (response) {
+            try {
+              const rrnData = await fetchRRN(response.razorpay_payment_id);
+              const rrnNumber = rrnData.rrnNumber || "Not Available";
+              await setDoc(
+                doc(db, "Doner-details", docRef.id),
+                {
+                  ...formData,
+                  amount: cleanAmount,
+                  date: new Date(),
+                  status: "success",
+                  rrnNumber,
+                  paymentId: response.razorpay_payment_id,
+                  orderId: order.id || null,
+                },
+                { merge: true }
+              );
+              alert("🎉 Payment Successful! RRN: " + rrnNumber);
+            } catch (err) {
+              console.error("❌ Error fetching RRN:", err);
+              await setDoc(
+                doc(db, "Doner-details", docRef.id),
+                {
+                  ...formData,
+                  amount: cleanAmount,
+                  date: new Date(),
+                  status: "success",
+                  paymentId: response.razorpay_payment_id,
+                  orderId: order.id || null,
+                },
+                { merge: true }
+              );
+              alert("Payment successful but failed to fetch RRN.");
+            } finally {
+              document.body.style.overflow = "auto";
+            }
           },
-        },
-        prefill: {
-          name: formData.name,
-          email: formData.email,
-          contact: formData.phone,
-        },
-        theme: { color: "#3399cc" },
-      };
-
-      const rzp1 = new window.Razorpay(options);
-      rzp1.open();
-      setIsLoadingPayment(false);
-      resetForm();
+          modal: {
+            ondismiss: async function () {
+              await setDoc(
+                doc(db, "Doner-details", docRef.id),
+                {
+                  ...formData,
+                  amount: cleanAmount,
+                  date: new Date(),
+                  status: "failure",
+                  orderId: order.id || null,
+                },
+                { merge: true }
+              );
+              document.body.style.overflow = "auto";
+            },
+          },
+          prefill: {
+            name: formData.name,
+            email: formData.email,
+            contact: formData.phone,
+          },
+          theme: { color: "#3399cc" },
+        };
+        const rzp1 = new window.Razorpay(options);
+        rzp1.open();
+        setIsLoadingPayment(false);
+        resetForm();
+      }, 15000);
     } catch (error) {
       console.error("❌ Error processing donation:", error);
       alert("Failed to process donation. Try again.");
@@ -236,6 +228,7 @@ const Donate = () => {
   // -------------------- JSX --------------------
   return (
     <div className="donation-container">
+      {/* ✅ SEO TAGS */}
       <Helmet>
         <title>Donate | Malaviya Vidyalaya Kendram Uvari - Support Rural Education</title>
         <meta
@@ -247,6 +240,15 @@ const Donate = () => {
           content="Malaviya Vidyalaya Kendram, Uvari School, donate school, Tamil Nadu education, rural school, charity, Tirunelveli school, support education, India donation, help children study"
         />
         <meta name="author" content="Malaviya Vidyalaya Kendram School" />
+        <meta property="og:title" content="Donate to Malaviya Vidyalaya Kendram - Support Rural Education" />
+        <meta
+          property="og:description"
+          content="Make a difference. Donate to Malaviya Vidyalaya Kendram to support rural education in Uvari, Tirunelveli."
+        />
+        <meta property="og:image" content="/assets/Blue and Brown Illustrative School Logo.png" />
+        <meta property="og:url" content="https://malaviyavidyakendramurvari.netlify.app/donate" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://malaviyavidyakendramurvari.netlify.app/donate" />
       </Helmet>
 
       {isLoadingPayment ? (
@@ -257,7 +259,38 @@ const Donate = () => {
       ) : (
         <>
           <div className="donation-info">
-            {/* ✅ Same content, logo, contact */}
+            <div className="org-logo">
+              <img
+                src="/assets/Blue and Brown Illustrative School Logo.png"
+                alt="Malaviya Vidyalaya Kendram Logo"
+              />
+            </div>
+            <h2 className="org-name">Malaviya Vidyalaya Kendram</h2>
+            <h3 className="donation-title">Donate to Educate</h3>
+            <p className="donation-text">
+              We would like to support the Malaviya Vidyalaya Kendram as a small
+              effort to express our gratitude for everything we’ve been blessed
+              with!
+            </p>
+            <div className="contact-box">
+              <h4>Contact Us:</h4>
+              <p>📧 malaviavidyakendram@gmail.com</p>
+              <p>📞 Ph- 04637-210990</p>
+            </div>
+            <div className="terms">
+              <h4>Terms & Conditions:</h4>
+              <p>
+                You agree to share information entered on this page with
+                Malaviya Vidyalaya Kendram and Razorpay, adhering to applicable
+                laws.
+              </p>
+            </div>
+            <button
+              className="history-btn"
+              onClick={() => navigate("/donordetails")}
+            >
+              📜 View Donor History
+            </button>
           </div>
 
           <div className="donation-form">
